@@ -1,5 +1,5 @@
-import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@workspace/ui/components/form";
 import { Button } from "@workspace/ui/components/button";
@@ -8,20 +8,18 @@ import { WidgetHeader } from "@/modules/widget/ui/components/widget-header";
 import { useMutation } from "convex/react";
 import { api } from "@workspace/backend/_generated/api";
 import { Doc } from "@workspace/backend/_generated/dataModel";
+import { useAtomValue, useSetAtom } from "jotai";
+import { contactSessionIdAtomFamily, organizationIdAtom } from "../../atoms/widget-atoms";
 
 const formSchema = z.object({
-  name: z.string().min(1, {
-    message: "Name is required",
-  }),
-  email: z.string().email({
-    message: "Invalid email address.",
-  }),
+  name: z.string().min(1, "Name is required"),
+  email: z.string().email("Invalid email address"),
 });
 
-// Temporary, before we add state management
-const organizationId = "123";
-
 export const WidgetAuthScreen = () => {
+  const organizationId = useAtomValue(organizationIdAtom);
+  const setContactSessionId = useSetAtom(contactSessionIdAtomFamily(organizationId || ""));
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -52,11 +50,13 @@ export const WidgetAuthScreen = () => {
       currentUrl: window.location.href,
     };
 
-    await createContactSession({
+    const contactSessionId = await createContactSession({
       ...values,
       organizationId,
       metadata,
     });
+
+    setContactSessionId(contactSessionId);
   };
 
   return (
@@ -68,7 +68,7 @@ export const WidgetAuthScreen = () => {
         </div>
       </WidgetHeader>
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-1 flex-col gap-y-4 p-4">
+        <form className="flex flex-1 flex-col gap-y-4 p-4" onSubmit={form.handleSubmit(onSubmit)}>
           <FormField
             control={form.control}
             name="name"
@@ -94,7 +94,7 @@ export const WidgetAuthScreen = () => {
                 <FormControl>
                   <Input
                     className="h-10 bg-background"
-                    placeholder="e.g. johndoe@example.com"
+                    placeholder="e.g. john.doe@example.com"
                     type="email"
                     {...field}
                   />
